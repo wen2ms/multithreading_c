@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <pthread.h>
-#include <unistd.h>
 
 void* callback(void* arg) {
     for (int i = 0; i < 5; ++i) {
@@ -21,7 +20,7 @@ int main() {
     }
     printf("Main thread: %p\n", pthread_self());
 
-    sleep(1);
+    pthread_exit(NULL);
 
     return 0;
 }

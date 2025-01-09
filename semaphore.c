@@ -7,6 +7,8 @@
 dispatch_semaphore_t semaphore_producer;
 dispatch_semaphore_t semaphore_consumer;
 
+pthread_mutex_t mutex;
+
 struct Node {
     int number;
     struct Node* next;
@@ -18,6 +20,8 @@ void* produce(void* arg) {
     while (1) {
         dispatch_semaphore_wait(semaphore_producer, DISPATCH_TIME_FOREVER);
 
+        pthread_mutex_lock(&mutex);
+
         struct Node* new_node = (struct Node*)malloc(sizeof(struct Node));
 
         new_node->number = rand() % 100;
@@ -25,6 +29,8 @@ void* produce(void* arg) {
         head = new_node;
 
         printf("Producer, id: %p, number: %d\n", pthread_self(), new_node->number);
+
+        pthread_mutex_unlock(&mutex);
 
         dispatch_semaphore_signal(semaphore_consumer);
 
@@ -38,12 +44,16 @@ void* consume(void* arg) {
     while (1) {
         dispatch_semaphore_wait(semaphore_consumer, DISPATCH_TIME_FOREVER);
 
+        pthread_mutex_lock(&mutex);
+
         struct Node* node = head;
 
         printf("Consumer, id: %p, number: %d\n", pthread_self(), node->number);
 
         head = head->next;
         free(node);
+
+        pthread_mutex_unlock(&mutex);
 
         dispatch_semaphore_signal(semaphore_producer);
 
@@ -54,8 +64,9 @@ void* consume(void* arg) {
 }
 
 int main() {
-    semaphore_producer = dispatch_semaphore_create(1);
+    semaphore_producer = dispatch_semaphore_create(5);
     semaphore_consumer = dispatch_semaphore_create(0);
+    pthread_mutex_init(&mutex, NULL);
 
     pthread_t producers[5], consumers[5];
 
@@ -74,6 +85,7 @@ int main() {
 
     dispatch_release(semaphore_producer);
     dispatch_release(semaphore_consumer);
+    pthread_mutex_destroy(&mutex);
 
     return 0;
 }
